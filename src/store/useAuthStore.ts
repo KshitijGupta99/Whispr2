@@ -1,10 +1,8 @@
 import { create } from "zustand";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
-import { config } from "@/constants/config";
-import { endpoints } from "@/services/api/endpoints";
 import * as authService from "@/services/auth/authService";
 import type { AuthUser } from "@/services/auth/authTypes";
-import type { GoogleExchangeResponse } from "@/services/auth/authService";
 
 interface AuthState {
   user: AuthUser | null;
@@ -12,8 +10,7 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
   hydrate: () => Promise<void>;
-  signInWithGoogleMock: () => Promise<void>;
-  signInWithGoogleToken: (idToken: string) => Promise<void>;
+  signInWithGoogleNative: () => Promise<AuthUser | null>;
   signOut: () => Promise<void>;
   setSession: (user: AuthUser, token: string, refresh?: string) => Promise<void>;
 }
@@ -62,27 +59,26 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user, token, isAuthenticated: true, isLoading: false });
   },
 
-  /** Dev-friendly path: requests a real JWT from `/api/auth/google`. */
-  signInWithGoogleMock: async () => {
-    const res = await fetch(`${config.apiUrl}${endpoints.authGoogle}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken: "" }),
-    });
-    if (!res.ok) {
-      throw new Error("Could not reach the Whispr API. Start the backend on port 3000.");
+  signInWithGoogleNative: async () => {
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    } catch (error) {
+      console.error("Play Services check failed:", error);
+      throw new Error("Google Play Services not available or outdated. Please update Google Play Services.");
     }
-    const data = (await res.json()) as GoogleExchangeResponse;
-    await authService.persistTokens(data.token, data.refreshToken);
-    set({
-      user: data.user,
-      token: data.token,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-  },
 
-  signInWithGoogleToken: async (idToken) => {
+    const response = await GoogleSignin.signIn();
+    if (response.type !== "success") {
+      console.error("GoogleSignin.signIn() returned non-success:", response);
+      const errorMsg = response.type === "cancelled" ? "Sign-in cancelled" : `Sign-in failed: ${response.type}`;
+      throw new Error(errorMsg);
+    }
+
+    const idToken = response.data.idToken;
+    if (!idToken) {
+      throw new Error("Google Sign-In did not return an ID token.");
+    }
+
     const exchange = await authService.exchangeGoogleToken({ idToken });
     await authService.persistTokens(exchange.token, exchange.refreshToken);
     set({
@@ -91,6 +87,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: true,
       isLoading: false,
     });
+    return exchange.user;
   },
 
   signOut: async () => {

@@ -1,16 +1,11 @@
 import { GradientOrb } from "@/components/ui/GradientOrb";
-import { DevAuthSection } from "@/components/splash/DevAuthSection";
 import { GoogleAuthSection } from "@/components/splash/GoogleAuthSection";
 import { colors } from "@/constants/colors";
-import { config } from "@/constants/config";
 import { fonts } from "@/constants/fonts";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useEffect } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -55,7 +50,7 @@ export default function WelcomeScreen() {
         Turn your manuscript into an audiobook with just a few taps.
       </Text>
       <View className="mt-10 w-full items-center">
-        {config.googleClientId ? <GoogleAuthSection /> : <DevAuthSection />}
+        <GoogleAuthSection />
       </View>
     </View>
   );
