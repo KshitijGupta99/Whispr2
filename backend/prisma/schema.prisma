@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Status {
+  PROCESSING
+  READY
+  FAILED
+}
+
+model User {
+  id          String      @id @default(cuid())
+  email       String      @unique
+  name        String
+  avatar      String?
+  audiobooks  Audiobook[]
+  createdAt   DateTime    @default(now())
+}
+
+model Audiobook {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  title     String
+  voiceId   String
+  status    Status    @default(PROCESSING)
+  duration  Int?
+  chapters  Chapter[]
+  createdAt DateTime  @default(now())
+}
+
+model Chapter {
+  id           String    @id @default(cuid())
+  audiobookId  String
+  audiobook    Audiobook @relation(fields: [audiobookId], references: [id])
+  index        Int
+  title        String
+  audioUrl     String
+  duration     Int
+  waveformData Float[]
+}
