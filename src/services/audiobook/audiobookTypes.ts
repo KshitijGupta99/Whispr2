@@ -17,6 +17,7 @@ export interface AudiobookDto {
   duration: number | null;
   chapters: ChapterDto[];
   createdAt: string;
+  errorMessage?: string;
 }
 
 export interface GenerationStatusDto {
@@ -26,4 +27,5 @@ export interface GenerationStatusDto {
   chaptersReady: number;
   totalChapters: number;
   voiceId?: string;
+  errorMessage?: string;
 }

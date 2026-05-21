@@ -6,24 +6,29 @@ import { FlatList, Text, View } from "react-native";
 interface ChapterListProps {
   chapters: ChapterDto[];
   currentId: string;
+  onSelectChapter?: (id: string) => void;
 }
 
 /**
- * Scrollable list of upcoming chapters with mini waveforms.
+ * Scrollable list of chapters with tap-to-play.
  */
-export function ChapterList({ chapters, currentId }: ChapterListProps) {
-  const next = chapters.filter((c) => c.id !== currentId);
-
+export function ChapterList({ chapters, currentId, onSelectChapter }: ChapterListProps) {
   return (
     <View className="mt-5 flex-1">
       <Text className="mb-2 text-[18px] text-textPrimary" style={{ fontFamily: fonts.subheading }}>
-        Next chapters
+        Chapters
       </Text>
       <FlatList
-        data={next}
+        data={chapters}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <ChapterRow title={item.title} durationSeconds={item.duration} seed={item.id} />
+          <ChapterRow
+            title={item.title}
+            durationSeconds={item.duration}
+            seed={item.id}
+            active={item.id === currentId}
+            onPress={onSelectChapter ? () => onSelectChapter(item.id) : undefined}
+          />
         )}
       />
     </View>

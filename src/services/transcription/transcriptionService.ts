@@ -11,3 +11,13 @@ export async function transcribeAudio(formData: FormData): Promise<Transcription
   });
   return data;
 }
+
+/**
+ * Uploads PDF/DOCX and returns extracted text.
+ */
+export async function extractDocument(formData: FormData): Promise<TranscriptionResult> {
+  const { data } = await apiClient.post<TranscriptionResult>(endpoints.transcriptionExtract, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}

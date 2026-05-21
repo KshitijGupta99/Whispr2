@@ -7,17 +7,25 @@ import { VOICE_CATALOG } from "../services/voiceCatalog";
  * Returns the static narrator catalog merged with any provider voices.
  */
 export async function listVoices(_req: Request, res: Response) {
-  const tts = TTSProviderFactory.create();
-  const remote = await tts.listVoices();
-  res.json(remote.length ? remote : VOICE_CATALOG);
+  try {
+    const tts = TTSProviderFactory.create();
+    const remote = await tts.listVoices();
+    res.json(remote.length ? remote : VOICE_CATALOG);
+  } catch {
+    res.json(VOICE_CATALOG);
+  }
 }
 
 /**
  * Streams a short preview clip for the requested voice id.
  */
 export async function previewVoice(req: Request, res: Response) {
-  const tts = TTSProviderFactory.create();
-  const buf = await tts.previewVoice(req.params.id, "Whispr preview line.");
-  res.setHeader("Content-Type", "audio/mpeg");
-  res.send(buf);
+  try {
+    const tts = TTSProviderFactory.create();
+    const buf = await tts.previewVoice(req.params.id, "Whispr preview line.");
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(buf);
+  } catch (e) {
+    res.status(500).json({ message: e instanceof Error ? e.message : "Preview failed" });
+  }
 }

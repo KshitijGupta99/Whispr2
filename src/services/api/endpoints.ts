@@ -7,4 +7,5 @@ export const endpoints = {
   voices: "/voices",
   voicePreview: (id: string) => `/voices/${id}/preview`,
   transcriptionAudio: "/transcription/audio",
+  transcriptionExtract: "/transcription/extract",
 } as const;

@@ -12,7 +12,7 @@ import { formatDurationHuman } from "@/utils/timeFormatter";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -27,8 +27,11 @@ export default function PlayerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const setSleepTimer = usePlayerStore((s) => s.setSleepTimer);
+  const sleepMinutes = usePlayerStore((s) => s.sleepMinutes);
   const speed = usePlayerStore((s) => s.speed);
   const setSpeed = usePlayerStore((s) => s.setSpeed);
+  const positionsByChapter = usePlayerStore((s) => s.positionsByChapter);
+  const setChapterPosition = usePlayerStore((s) => s.setChapterPosition);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["audiobook", id],
@@ -47,6 +50,13 @@ export default function PlayerScreen() {
     return chapters[0];
   }, [chapterId, chapters]);
 
+  const onPositionChange = useCallback(
+    (chId: string, seconds: number) => {
+      setChapterPosition(chId, seconds);
+    },
+    [setChapterPosition],
+  );
+
   if (isLoading || !data) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -62,6 +72,28 @@ export default function PlayerScreen() {
           {error instanceof Error ? error.message : "Failed to load audiobook"}
         </Text>
         <PrimaryButton label="Retry" onPress={() => void refetch()} />
+      </View>
+    );
+  }
+
+  if (data.status !== "READY") {
+    return (
+      <View className="flex-1 items-center justify-center bg-background px-6">
+        <Text className="mb-4 text-center text-textPrimary" style={{ fontFamily: fonts.subheading }}>
+          {data.status === "FAILED" ? "This audiobook failed to generate." : "Still processing…"}
+        </Text>
+        {data.errorMessage ? (
+          <Text className="mb-4 text-center text-[14px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+            {data.errorMessage}
+          </Text>
+        ) : null}
+        <PrimaryButton
+          label={data.status === "FAILED" ? "Create again" : "View progress"}
+          onPress={() => {
+            if (data.status === "FAILED") router.replace("/(tabs)/create");
+            else router.replace({ pathname: "/generating", params: { id: data.id, voice: data.voiceId } });
+          }}
+        />
       </View>
     );
   }
@@ -110,6 +142,7 @@ export default function PlayerScreen() {
         </Text>
         <Text className="mt-1 text-center text-[14px] text-textSecondary" style={{ fontFamily: fonts.body }}>
           {formatDurationHuman(totalSec)} · {chapters.length} chapters
+          {sleepMinutes ? ` · sleep ${sleepMinutes}m` : ""}
         </Text>
         {current ? (
           <View className="mt-5">
@@ -122,7 +155,12 @@ export default function PlayerScreen() {
               </Text>
             </View>
             <AudioPlayer
+              key={current.id}
               chapter={current}
+              speed={speed}
+              sleepMinutes={sleepMinutes}
+              initialPositionSeconds={positionsByChapter[current.id] ?? 0}
+              onPositionChange={onPositionChange}
               onPrev={() => {
                 const i = chapters.findIndex((c) => c.id === current.id);
                 if (i > 0) setChapterId(chapters[i - 1].id);
@@ -135,7 +173,11 @@ export default function PlayerScreen() {
           </View>
         ) : null}
         <View className="min-h-[120px] flex-1">
-          <ChapterList chapters={chapters} currentId={current?.id ?? ""} />
+          <ChapterList
+            chapters={chapters}
+            currentId={current?.id ?? ""}
+            onSelectChapter={(cid) => setChapterId(cid)}
+          />
         </View>
         <View className="mt-4 gap-3 border-t border-border pt-4">
           <View className="flex-row items-center justify-between">

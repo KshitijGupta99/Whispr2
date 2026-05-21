@@ -8,6 +8,7 @@ import { createAudiobookJob } from "@/services/audiobook/audiobookService";
 import { fetchVoices } from "@/services/voice/voiceService";
 import type { Voice } from "@/services/voice/voiceTypes";
 import { useCreationStore } from "@/store/useCreationStore";
+import { deriveTitle } from "@/utils/deriveTitle";
 import { useVoiceStore } from "@/store/useVoiceStore";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -24,7 +25,7 @@ export default function VoiceSelectScreen() {
   const manuscript = useCreationStore((s) => s.manuscriptText);
   const selected = useVoiceStore((s) => s.selectedVoice);
   const setSelected = useVoiceStore((s) => s.setSelectedVoice);
-  const { activeId, playing, toggle } = useVoicePreview();
+  const { activeId, playing, toggle, stop } = useVoicePreview();
 
   const { data: voices, isLoading } = useQuery({
     queryKey: ["voices"],
@@ -34,13 +35,17 @@ export default function VoiceSelectScreen() {
   });
 
   const createMut = useMutation({
+    onMutate: async () => {
+      await stop();
+    },
     mutationFn: async () => {
       const voice = useVoiceStore.getState().selectedVoice;
       if (!voice) throw new Error("Pick a voice");
+      const text = useCreationStore.getState().manuscriptText;
       return createAudiobookJob({
-        text: useCreationStore.getState().manuscriptText,
+        text,
         voiceId: voice.id,
-        title: "Your Story",
+        title: deriveTitle(text),
       });
     },
     onSuccess: (res) => {

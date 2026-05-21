@@ -1,6 +1,7 @@
 import { voicePreviewUrl } from "@/services/api/client";
 import { Audio } from "expo-av";
 import { useCallback, useRef, useState } from "react";
+import { Alert } from "react-native";
 
 /**
  * Plays short remote preview clips for the voice catalog.
@@ -32,15 +33,24 @@ export function useVoicePreview() {
         shouldDuckAndroid: true,
       });
       const uri = voicePreviewUrl(voiceId);
-      const { sound: s } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
-      sound.current = s;
-      setActiveId(voiceId);
-      setPlaying(true);
-      s.setOnPlaybackStatusUpdate((st) => {
-        if (st.isLoaded && !st.isPlaying) {
-          setPlaying(false);
-        }
-      });
+      try {
+        const { sound: s } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+        sound.current = s;
+        setActiveId(voiceId);
+        setPlaying(true);
+        s.setOnPlaybackStatusUpdate((st) => {
+          if (st.isLoaded && !st.isPlaying) {
+            setPlaying(false);
+          }
+        });
+      } catch {
+        setActiveId(null);
+        setPlaying(false);
+        Alert.alert(
+          "Preview unavailable",
+          "The app could not reach your API for audio. Use your computer's LAN IP in EXPO_PUBLIC_API_URL, run the backend with npm run dev, and allow the port in your firewall.",
+        );
+      }
     },
     [activeId, playing, stop],
   );

@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/api/client";
 import { endpoints } from "@/services/api/endpoints";
 import type { AudiobookDto, GenerationStatusDto } from "@/services/audiobook/audiobookTypes";
+import { resolveMediaUrl } from "@/utils/mediaUrl";
 
 export interface CreateAudiobookPayload {
   text: string;
@@ -11,6 +12,26 @@ export interface CreateAudiobookPayload {
 export interface CreateAudiobookResponse {
   id: string;
   status: string;
+}
+
+function withResolvedAudio(book: AudiobookDto, token?: string | null): AudiobookDto {
+  return {
+    ...book,
+    chapters: book.chapters.map((c) => ({
+      ...c,
+      audioUrl: resolveMediaUrl(c.audioUrl, token),
+    })),
+  };
+}
+
+function readToken(): string | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useAuthStore } = require("@/store/useAuthStore") as typeof import("@/store/useAuthStore");
+    return useAuthStore.getState().token;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -39,7 +60,7 @@ export async function fetchGenerationStatus(id: string): Promise<GenerationStatu
  */
 export async function fetchAudiobook(id: string): Promise<AudiobookDto> {
   const { data } = await apiClient.get<AudiobookDto>(endpoints.audiobook(id));
-  return data;
+  return withResolvedAudio(data, readToken());
 }
 
 /**
@@ -47,7 +68,8 @@ export async function fetchAudiobook(id: string): Promise<AudiobookDto> {
  */
 export async function listAudiobooks(): Promise<AudiobookDto[]> {
   const { data } = await apiClient.get<AudiobookDto[]>(endpoints.audiobooks);
-  return data;
+  const token = readToken();
+  return data.map((b) => withResolvedAudio(b, token));
 }
 
 /**

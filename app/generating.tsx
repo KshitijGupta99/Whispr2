@@ -65,6 +65,11 @@ export default function GeneratingScreen() {
         <Text className="mb-4 text-center text-[16px] text-textPrimary" style={{ fontFamily: fonts.subheading }}>
           Something went wrong while synthesizing.
         </Text>
+        {data.errorMessage ? (
+          <Text className="mb-6 text-center text-[14px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+            {data.errorMessage}
+          </Text>
+        ) : null}
         <PrimaryButton label="Try again" onPress={() => router.replace("/voice-select")} />
       </View>
     );

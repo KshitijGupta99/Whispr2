@@ -1,17 +1,67 @@
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { colors } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
-import { listAudiobooks } from "@/services/audiobook/audiobookService";
-import { useQuery } from "@tanstack/react-query";
+import { deleteAudiobook, listAudiobooks } from "@/services/audiobook/audiobookService";
+import type { AudiobookDto } from "@/services/audiobook/audiobookTypes";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+
+function statusLabel(status: AudiobookDto["status"]): string {
+  if (status === "READY") return "Ready";
+  if (status === "FAILED") return "Failed";
+  return "Processing";
+}
 
 export default function LibraryScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["audiobooks"],
     queryFn: listAudiobooks,
   });
+
+  const removeMut = useMutation({
+    mutationFn: deleteAudiobook,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["audiobooks"] }),
+  });
+
+  const onPressItem = (item: AudiobookDto) => {
+    if (item.status === "READY") {
+      router.push(`/player/${item.id}`);
+      return;
+    }
+    if (item.status === "PROCESSING") {
+      router.push({ pathname: "/generating", params: { id: item.id, voice: item.voiceId } });
+      return;
+    }
+    Alert.alert(
+      "Generation failed",
+      item.errorMessage ?? "Something went wrong while creating this audiobook.",
+      [
+        { text: "Dismiss", style: "cancel" },
+        { text: "Create again", onPress: () => router.push("/(tabs)/create") },
+      ],
+    );
+  };
+
+  const confirmDelete = (item: AudiobookDto) => {
+    Alert.alert("Delete audiobook", `Remove "${item.title}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => removeMut.mutate(item.id),
+      },
+    ]);
+  };
 
   if (isLoading) {
     return (
@@ -58,16 +108,20 @@ export default function LibraryScreen() {
         renderItem={({ item }) => (
           <Pressable
             className="mb-3 rounded-2xl border border-border bg-surface p-4"
-            onPress={() => {
-              if (item.status === "READY") router.push(`/player/${item.id}`);
-            }}
+            onPress={() => onPressItem(item)}
+            onLongPress={() => confirmDelete(item)}
           >
             <Text className="text-[16px] text-textPrimary" style={{ fontFamily: fonts.subheading }}>
               {item.title}
             </Text>
             <Text className="mt-1 text-[13px] text-textSecondary" style={{ fontFamily: fonts.body }}>
-              {item.status} · {item.chapters.length} chapters
+              {statusLabel(item.status)} · {item.chapters.length} chapters
             </Text>
+            {item.status === "FAILED" && item.errorMessage ? (
+              <Text className="mt-1 text-[12px] text-red-500" style={{ fontFamily: fonts.body }} numberOfLines={2}>
+                {item.errorMessage}
+              </Text>
+            ) : null}
           </Pressable>
         )}
       />

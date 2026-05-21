@@ -36,10 +36,15 @@ export default function RootLayout() {
   }, [hydrate]);
 
   useEffect(() => {
+    if (__DEV__) {
+      // eslint-disable-next-line no-console
+      console.log("[Whispr] API base URL:", config.apiUrl);
+    }
+  }, []);
+
+  useEffect(() => {
     if (config.googleWebClientId) {
-      GoogleSignin.configure({
-        webClientId: config.googleWebClientId,
-      });
+      GoogleSignin.configure({ webClientId: config.googleWebClientId });
     }
   }, []);
 

@@ -3,24 +3,51 @@ import { fonts } from "@/constants/fonts";
 import { PlaybackWaveform } from "@/components/player/PlaybackWaveform";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import type { ChapterDto } from "@/services/audiobook/audiobookTypes";
+import type { PlaybackSpeed } from "@/store/usePlayerStore";
 import * as Haptics from "expo-haptics";
+import { useEffect } from "react";
 import { Pressable, Text, View } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Polygon, Stop } from "react-native-svg";
 import { formatDuration } from "@/utils/timeFormatter";
 
 interface AudioPlayerProps {
   chapter: ChapterDto;
+  speed?: PlaybackSpeed;
+  initialPositionSeconds?: number;
+  onPositionChange?: (chapterId: string, seconds: number) => void;
   onPrev?: () => void;
   onNext?: () => void;
+  sleepMinutes?: number | null;
 }
 
 /**
  * Full-width player controls with waveform and skip actions.
  */
-export function AudioPlayer({ chapter, onPrev, onNext }: AudioPlayerProps) {
-  const { isPlaying, positionMillis, durationMillis, toggle } = useAudioPlayer(chapter.audioUrl);
+export function AudioPlayer({
+  chapter,
+  speed = 1,
+  initialPositionSeconds = 0,
+  onPositionChange,
+  onPrev,
+  onNext,
+  sleepMinutes = null,
+}: AudioPlayerProps) {
+  const { isPlaying, positionMillis, durationMillis, toggle, pause } = useAudioPlayer(chapter.audioUrl, {
+    chapterId: chapter.id,
+    speed,
+    initialPositionSeconds,
+    onPositionChange,
+  });
   const progress = durationMillis ? positionMillis / durationMillis : 0;
-  const gid = "player-main";
+  const gid = `player-main-${chapter.id}`;
+
+  useEffect(() => {
+    if (!sleepMinutes) return;
+    const t = setTimeout(() => {
+      void pause();
+    }, sleepMinutes * 60_000);
+    return () => clearTimeout(t);
+  }, [sleepMinutes, pause, chapter.id]);
 
   return (
     <View className="rounded-3xl bg-surface px-4 pb-5 pt-4">
