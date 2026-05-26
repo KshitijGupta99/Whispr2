@@ -39,10 +39,20 @@ export class OpenAITTSProvider implements ITTSProvider {
       }),
     });
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`OpenAI TTS: ${res.status} ${err.slice(0, 200)}`);
+      const err = await res.text().catch(() => "");
+      const msg = `OpenAI TTS error ${res.status}: ${err.slice(0, 200)}`;
+      // eslint-disable-next-line no-console
+      console.error(`[OpenAI TTS] ${msg}`);
+      throw new Error(msg);
     }
-    return Buffer.from(await res.arrayBuffer());
+    try {
+      const ab = await res.arrayBuffer();
+      return Buffer.from(ab);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[OpenAI TTS] Failed to read response arrayBuffer", e);
+      throw new Error("OpenAI TTS: failed to decode response");
+    }
   }
 
   async synthesize(text: string, voiceId: string, _options?: TTSOptions): Promise<Buffer> {
@@ -54,7 +64,13 @@ export class OpenAITTSProvider implements ITTSProvider {
     for (let i = 0; i < text.length; i += MAX_INPUT) {
       const slice = text.slice(i, i + MAX_INPUT);
       if (!slice.trim()) continue;
-      chunks.push(await this.speechChunk(slice, voice));
+      try {
+        chunks.push(await this.speechChunk(slice, voice));
+      } catch (e) {
+        // propagate with context
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`OpenAI TTS chunk failed: ${msg}`);
+      }
     }
     if (!chunks.length) return Buffer.alloc(0);
     return Buffer.concat(chunks);

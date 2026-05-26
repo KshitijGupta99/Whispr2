@@ -13,6 +13,7 @@ import {
   Text,
   View,
 } from "react-native";
+import TopBar from "@/components/ui/TopBar";
 
 function statusLabel(status: AudiobookDto["status"]): string {
   if (status === "READY") return "Ready";
@@ -99,6 +100,7 @@ export default function LibraryScreen() {
 
   return (
     <View className="flex-1 bg-background px-5 pt-14">
+      <TopBar />
       <Text className="mb-4 text-[22px] text-textPrimary" style={{ fontFamily: fonts.heading }}>
         Library
       </Text>

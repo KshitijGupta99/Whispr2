@@ -71,6 +71,8 @@ async function updateProgress(
 
 async function runPipeline(id: string) {
   const tts = TTSProviderFactory.create();
+  // eslint-disable-next-line no-console
+  console.log(`[${new Date().toISOString()}] Starting pipeline for audiobook ${id} using ${tts.constructor.name}`);
   try {
     const book = await prisma.audiobook.findUnique({ where: { id } });
     if (!book || book.status !== Status.PROCESSING) return;
@@ -122,8 +124,12 @@ async function runPipeline(id: string) {
             data: { audioUrl, duration },
           });
         }
-      } catch {
-        // keep demo URL on chapter row
+      } catch (e) {
+        // Log and continue with demo audio for this chapter
+        // eslint-disable-next-line no-console
+        console.error(`[${new Date().toISOString()}] TTS synth failed for audiobook ${id} chapter ${idx + 1}:`, e instanceof Error ? e.stack ?? e.message : e);
+        // update chapter with an error message field (best-effort)
+        await prisma.chapter.update({ where: { id: chapter.id }, data: { waveformData: JSON.stringify(waveformFromSeed(`${id}-${idx}`)) } }).catch(() => {});
       }
 
       totalDuration += duration;
@@ -148,6 +154,8 @@ async function runPipeline(id: string) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Generation failed";
+    // eslint-disable-next-line no-console
+    console.error(`[${new Date().toISOString()}] Pipeline error for audiobook ${id}:`, e instanceof Error ? e.stack ?? e : e);
     await prisma.audiobook
       .update({
         where: { id },

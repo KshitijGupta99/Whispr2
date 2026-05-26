@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import TopBar from "@/components/ui/TopBar";
 
 export default function CreateScreen() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function CreateScreen() {
 
   return (
     <View className="flex-1 items-center bg-background px-5 pt-10">
+      <TopBar />
       <View className="w-full max-w-[420px] flex-1">
         <InputCard>
         <View className="mb-4 items-center">

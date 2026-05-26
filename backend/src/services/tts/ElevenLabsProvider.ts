@@ -39,23 +39,30 @@ export class ElevenLabsProvider implements ITTSProvider {
       return Buffer.from(text.slice(0, 80));
     }
     const voice = this.elevenVoiceId(voiceId);
-    const res = await axios.post(
-      `${BASE}/text-to-speech/${voice}`,
-      {
-        text: text.slice(0, 5000),
-        model_id: process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2",
-      },
-      {
-        headers: {
-          "xi-api-key": this.apiKey,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
+    try {
+      const res = await axios.post(
+        `${BASE}/text-to-speech/${voice}`,
+        {
+          text: text.slice(0, 5000),
+          model_id: process.env.ELEVENLABS_MODEL ?? "eleven_multilingual_v2",
         },
-        responseType: "arraybuffer",
-        timeout: 120_000,
-      },
-    );
-    return Buffer.from(res.data);
+        {
+          headers: {
+            "xi-api-key": this.apiKey,
+            "Content-Type": "application/json",
+            Accept: "audio/mpeg",
+          },
+          responseType: "arraybuffer",
+          timeout: 120_000,
+        },
+      );
+      return Buffer.from(res.data);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[ElevenLabs TTS] synthesize failed", e instanceof Error ? e.stack ?? e.message : e);
+      const msg = e instanceof Error ? e.message : "ElevenLabs request failed";
+      throw new Error(`ElevenLabs TTS error: ${msg}`);
+    }
   }
 
   async listVoices(): Promise<Voice[]> {

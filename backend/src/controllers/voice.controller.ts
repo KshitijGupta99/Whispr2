@@ -9,6 +9,8 @@ import { VOICE_CATALOG } from "../services/voiceCatalog";
 export async function listVoices(_req: Request, res: Response) {
   try {
     const tts = TTSProviderFactory.create();
+    // eslint-disable-next-line no-console
+    console.log(`[${new Date().toISOString()}] Using TTS provider: ${tts.constructor.name}`);
     const remote = await tts.listVoices();
     res.json(remote.length ? remote : VOICE_CATALOG);
   } catch {
