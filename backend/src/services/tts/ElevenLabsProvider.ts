@@ -58,10 +58,21 @@ export class ElevenLabsProvider implements ITTSProvider {
       );
       return Buffer.from(res.data);
     } catch (e) {
+      const axiosErr = e as {
+        message?: string;
+        stack?: string;
+        response?: { status?: number; data?: unknown };
+      };
       // eslint-disable-next-line no-console
-      console.error("[ElevenLabs TTS] synthesize failed", e instanceof Error ? e.stack ?? e.message : e);
-      const msg = e instanceof Error ? e.message : "ElevenLabs request failed";
-      throw new Error(`ElevenLabs TTS error: ${msg}`);
+      console.error("[ElevenLabs TTS] synthesize failed", {
+        message: axiosErr.message,
+        status: axiosErr.response?.status,
+        data: axiosErr.response?.data,
+        stack: axiosErr.stack,
+      });
+      const msg = axiosErr.message ?? "ElevenLabs request failed";
+      const status = axiosErr.response?.status;
+      throw new Error(status ? `ElevenLabs TTS error (${status}): ${msg}` : `ElevenLabs TTS error: ${msg}`);
     }
   }
 

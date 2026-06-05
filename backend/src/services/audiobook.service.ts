@@ -87,8 +87,12 @@ async function runPipeline(id: string) {
 
     let totalDuration = 0;
 
+    const MAX_RETRIES = 2;
+    const RETRY_DELAY_MS = 800;
+    const MIN_SECONDS = 30;
+
     for (let idx = 0; idx < parts.length; idx++) {
-      const p = parts[idx];
+      let p = parts[idx];
       if (!p) continue;
 
       const cur = await prisma.audiobook.findUnique({ where: { id } });
@@ -99,6 +103,44 @@ async function runPipeline(id: string) {
         progress: Math.min(88, 20 + Math.round(((idx + 0.5) / Math.max(parts.length, 1)) * 68)),
       });
 
+      // Try synthesizing before creating DB chapter row so we can merge small chapters
+      let synthesizedBuf: Buffer | null = null;
+      let attempts = 0;
+      let usedParts = 1; // how many original parts this chapter consumed
+      let chapterTitle = p.title;
+      let contentToSynthesize = p.content;
+
+      while (attempts <= MAX_RETRIES) {
+        try {
+          synthesizedBuf = await tts.synthesize(contentToSynthesize, cur.voiceId, { format: "mp3" });
+          break;
+        } catch (e) {
+          attempts++;
+          // eslint-disable-next-line no-console
+          console.warn(`[${new Date().toISOString()}] TTS attempt ${attempts} failed for audiobook ${id} chapter ${idx + 1}:`, e instanceof Error ? e.message : e);
+          if (attempts > MAX_RETRIES) break;
+          // small delay before retry
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        }
+      }
+
+      // If we got a buffer but it's shorter than minimum seconds, try merging with next part
+      if (synthesizedBuf && estimateDurationSeconds(synthesizedBuf.length) < MIN_SECONDS && idx + 1 < parts.length) {
+        const next = parts[idx + 1];
+        // merge and retry once
+        contentToSynthesize = `${contentToSynthesize}\n\n${next.content}`;
+        chapterTitle = chapterTitle;
+        usedParts = 2;
+        try {
+          synthesizedBuf = await tts.synthesize(contentToSynthesize, cur.voiceId, { format: "mp3" });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn(`[${new Date().toISOString()}] TTS merge retry failed for audiobook ${id} chapter ${idx + 1}:`, e instanceof Error ? e.message : e);
+        }
+      }
+
+      // Create chapter DB row now (use demo audio by default)
       let audioUrl = DEMO_AUDIO;
       let duration = 10 + idx * 2;
 
@@ -106,30 +148,32 @@ async function runPipeline(id: string) {
         data: {
           audiobookId: id,
           index: idx + 1,
-          title: p.title,
+          title: chapterTitle,
           audioUrl: DEMO_AUDIO,
           duration,
           waveformData: JSON.stringify(waveformFromSeed(`${id}-${idx}`)),
         },
       });
 
-      try {
-        const buf = await tts.synthesize(p.content, cur.voiceId, { format: "mp3" });
-        if (buf.length > 0) {
-          duration = estimateDurationSeconds(buf.length);
-          await storageService.saveChapterAudio(id, chapter.id, buf);
+      if (synthesizedBuf && synthesizedBuf.length > 0) {
+        try {
+          duration = estimateDurationSeconds(synthesizedBuf.length);
+          await storageService.saveChapterAudio(id, chapter.id, synthesizedBuf);
           audioUrl = chapterMediaPath(id, chapter.id);
-          await prisma.chapter.update({
-            where: { id: chapter.id },
-            data: { audioUrl, duration },
-          });
+          await prisma.chapter.update({ where: { id: chapter.id }, data: { audioUrl, duration } });
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error(`[${new Date().toISOString()}] Failed saving chapter audio for ${id} chapter ${idx + 1}:`, e instanceof Error ? e.stack ?? e.message : e);
         }
-      } catch (e) {
-        // Log and continue with demo audio for this chapter
+      } else {
+        // No synthesized audio produced; leave demo and log
         // eslint-disable-next-line no-console
-        console.error(`[${new Date().toISOString()}] TTS synth failed for audiobook ${id} chapter ${idx + 1}:`, e instanceof Error ? e.stack ?? e.message : e);
-        // update chapter with an error message field (best-effort)
-        await prisma.chapter.update({ where: { id: chapter.id }, data: { waveformData: JSON.stringify(waveformFromSeed(`${id}-${idx}`)) } }).catch(() => {});
+        console.error(`[${new Date().toISOString()}] No TTS audio for audiobook ${id} chapter ${idx + 1}; using demo audio.`);
+      }
+
+      // If we consumed the next part as well, skip it in the main loop
+      if (usedParts > 1) {
+        idx += usedParts - 1;
       }
 
       totalDuration += duration;

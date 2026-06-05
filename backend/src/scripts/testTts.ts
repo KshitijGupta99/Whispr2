@@ -1,5 +1,8 @@
 import fs from "fs";
 import path from "path";
+// ensure env from backend/.env is loaded when running script directly
+import dotenv from "dotenv";
+dotenv.config({ path: path.join(process.cwd(), "backend/.env") });
 import { TTSProviderFactory } from "../services/tts/TTSProviderFactory";
 
 async function run() {

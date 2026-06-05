@@ -1,5 +1,6 @@
 import { defaultTtsProvider, providerKeys } from "../../config/providers";
 import { ElevenLabsProvider } from "./ElevenLabsProvider";
+import { FallbackTTSProvider } from "./FallbackTTSProvider";
 import type { ITTSProvider } from "./ITTSProvider";
 import { OpenAITTSProvider } from "./OpenAITTSProvider";
 
@@ -8,15 +9,25 @@ import { OpenAITTSProvider } from "./OpenAITTSProvider";
  */
 export class TTSProviderFactory {
   static create(): ITTSProvider {
-    if (defaultTtsProvider === "openai" && providerKeys.openai) {
-      return new OpenAITTSProvider(providerKeys.openai);
+    const elevenLabs = providerKeys.elevenlabs ? new ElevenLabsProvider(providerKeys.elevenlabs) : null;
+    const openAi = providerKeys.openai ? new OpenAITTSProvider(providerKeys.openai) : null;
+
+    if (defaultTtsProvider === "openai") {
+      if (openAi && elevenLabs) return new FallbackTTSProvider(openAi, elevenLabs, "OpenAI", "ElevenLabs");
+      if (openAi) return openAi;
+      if (elevenLabs) return elevenLabs;
+      return new ElevenLabsProvider("");
     }
-    if (defaultTtsProvider === "elevenlabs" && providerKeys.elevenlabs) {
-      return new ElevenLabsProvider(providerKeys.elevenlabs);
+
+    if (defaultTtsProvider === "elevenlabs") {
+      if (elevenLabs && openAi) return new FallbackTTSProvider(elevenLabs, openAi, "ElevenLabs", "OpenAI");
+      if (elevenLabs) return elevenLabs;
+      if (openAi) return openAi;
+      return new ElevenLabsProvider("");
     }
-    if (providerKeys.openai) {
-      return new OpenAITTSProvider(providerKeys.openai);
-    }
-    return new ElevenLabsProvider(providerKeys.elevenlabs);
+
+    if (elevenLabs && openAi) return new FallbackTTSProvider(elevenLabs, openAi, "ElevenLabs", "OpenAI");
+    if (openAi) return openAi;
+    return elevenLabs ?? new ElevenLabsProvider("");
   }
 }
