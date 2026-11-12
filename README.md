@@ -5,7 +5,7 @@ Turn **text**, **voice memos**, or **audio/PDF/DOCX uploads** into a multi-chapt
 ## Stack
 
 - **App:** Expo + **React Native dev build** (not Expo Go), Expo Router, NativeWind
-- **API:** Express, Prisma (SQLite), OpenAI (Whisper + GPT + TTS)
+- **API:** Express, Prisma (SQLite), ollama (Whisper + GPT + TTS), Eleven Labs
 
 ## Do not use Expo Go
 
