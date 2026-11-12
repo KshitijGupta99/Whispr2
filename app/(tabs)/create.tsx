@@ -21,79 +21,98 @@ export default function CreateScreen() {
   const [upOpen, setUpOpen] = useState(false);
 
   return (
-    <View className="flex-1 items-center bg-background px-5 pt-10">
+    <View className="flex-1 bg-background px-5 pt-10">
+      <View className="absolute -left-24 top-[-40] h-64 w-64 rounded-full bg-gradientStart/10" />
+      <View className="absolute -right-20 top-40 h-72 w-72 rounded-full bg-gradientEnd/10" />
       <TopBar />
-      <View className="w-full max-w-[420px] flex-1">
+      <View className="w-full max-w-[420px] flex-1 self-center">
         <InputCard>
-        <View className="mb-4 items-center">
-          <SparkleIcon size={24} />
-          <Text
-            className="mt-4 text-center text-[22px] leading-[28px] text-textPrimary"
-            style={{ fontFamily: fonts.heading }}
-          >
-            What would you like to make today?
-          </Text>
-        </View>
-        <TextInput
-          className="min-h-[240px] flex-1 rounded-3xl border border-border px-4 py-4 text-[16px] text-textPrimary"
-          style={{ fontFamily: fonts.body, textAlignVertical: "top" }}
-          multiline
-          placeholder="Describe your story book or text..."
-          placeholderTextColor={colors.textMuted}
-          value={text}
-          onChangeText={setText}
-        />
-        <View className="mb-4 mt-4">
-          <PrimaryButton
-            label="Let's create storybook →"
-            disabled={!text.trim()}
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/voice-select");
-            }}
+          <View className="mb-5 rounded-[28px] bg-background px-4 py-5">
+            <View className="mb-3 flex-row items-center justify-between">
+              <View className="rounded-full bg-accent/10 px-3 py-1.5">
+                <Text className="text-[11px] uppercase tracking-[0.18em] text-accent" style={{ fontFamily: fonts.bodyMedium }}>
+                  Create
+                </Text>
+              </View>
+              <SparkleIcon size={24} />
+            </View>
+            <Text
+              className="text-[24px] leading-[30px] text-textPrimary"
+              style={{ fontFamily: fonts.heading }}
+            >
+              What would you like to turn into a story?
+            </Text>
+            <Text className="mt-2 text-[14px] leading-[20px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+              Paste text, record a voice memo, or upload a document. We&apos;ll turn it into a narrated audiobook.
+            </Text>
+          </View>
+
+          <TextInput
+            className="min-h-[250px] flex-1 rounded-[28px] border border-border bg-surface px-4 py-4 text-[16px] text-textPrimary"
+            style={{ fontFamily: fonts.body, textAlignVertical: "top" }}
+            multiline
+            placeholder="Describe your story book or text..."
+            placeholderTextColor={colors.textMuted}
+            value={text}
+            onChangeText={setText}
           />
-        </View>
-        <View className="mb-4 flex-row justify-center gap-3">
-          <Pressable
-            className="flex-1 items-center rounded-2xl bg-background py-5"
-            onPress={() => {
-              void Haptics.selectionAsync();
-              setRecOpen(true);
-            }}
-          >
-            <Text className="text-[22px]">🎙</Text>
-            <Text className="mt-2 text-[16px] text-textSecondary" style={{ fontFamily: fonts.body }}>
-              Voice
+
+          <View className="mb-4 mt-4">
+            <PrimaryButton
+              label="Let's create storybook →"
+              disabled={!text.trim()}
+              onPress={() => {
+                void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push("/voice-select");
+              }}
+            />
+          </View>
+
+          <View className="mb-4 flex-row gap-3">
+            <Pressable
+              className="flex-1 rounded-[24px] border border-border bg-background px-4 py-5"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                setRecOpen(true);
+              }}
+            >
+              <Text className="text-[22px]">🎙</Text>
+              <Text className="mt-2 text-[16px] text-textPrimary" style={{ fontFamily: fonts.bodyMedium }}>
+                Voice memo
+              </Text>
+              <Text className="mt-1 text-[13px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+                Record and transcribe
+              </Text>
+            </Pressable>
+            <Pressable
+              className="flex-1 rounded-[24px] border border-border bg-background px-4 py-5"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                setUpOpen(true);
+              }}
+            >
+              <Text className="text-[22px]">📤</Text>
+              <Text className="mt-2 text-[16px] text-textPrimary" style={{ fontFamily: fonts.bodyMedium }}>
+                Upload file
+              </Text>
+              <Text className="mt-1 text-[13px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+                PDF, DOCX, or audio
+              </Text>
+            </Pressable>
+          </View>
+
+          <View className="rounded-[24px] bg-background px-4 py-4">
+            <Text className="text-[13px] uppercase tracking-[0.16em] text-textSecondary" style={{ fontFamily: fonts.bodyMedium }}>
+              Prompt ideas
             </Text>
-          </Pressable>
-          <Pressable
-            className="flex-1 items-center rounded-2xl bg-background py-5"
-            onPress={() => {
-              void Haptics.selectionAsync();
-              setUpOpen(true);
-            }}
-          >
-            <Text className="text-[22px]">📤</Text>
-            <Text className="mt-2 text-[16px] text-textSecondary" style={{ fontFamily: fonts.body }}>
-              Upload
+            <Text className="mt-2 text-[13px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+              Try: &quot;Turn my wedding speech into an audiobook&quot;
             </Text>
-          </Pressable>
-        </View>
-        <View className="mt-1">
-          <Text
-            className="text-center text-[13px] text-textSecondary italic"
-            style={{ fontFamily: fonts.body }}
-          >
-            Try: &quot;Turn my wedding speech into an audiobook&quot;
-          </Text>
-          <Text
-            className="mt-1 text-center text-[13px] text-textSecondary italic"
-            style={{ fontFamily: fonts.body }}
-          >
-            {`Or: "I wrote a children's story I'd like narrated"`}
-          </Text>
-        </View>
-      </InputCard>
+            <Text className="mt-1 text-[13px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+              {`Or: "I wrote a children's story I'd like narrated"`}
+            </Text>
+          </View>
+        </InputCard>
       </View>
       <RecordingModal
         visible={recOpen}

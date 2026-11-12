@@ -23,6 +23,7 @@ export function ChapterList({ chapters, currentId, onSelectChapter }: ChapterLis
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ChapterRow
+            index={item.index}
             title={item.title}
             durationSeconds={item.duration}
             seed={item.id}

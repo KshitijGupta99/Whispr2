@@ -135,68 +135,94 @@ export default function PlayerScreen() {
   };
 
   return (
-    <View className="flex-1 items-center bg-background px-5 pt-10">
-      <View className="w-full max-w-[420px] flex-1 rounded-[30px] bg-surface p-4">
-        <Text className="text-center text-[30px] text-textPrimary" style={{ fontFamily: fonts.heading }}>
-          {data.title}
-        </Text>
-        <Text className="mt-1 text-center text-[14px] text-textSecondary" style={{ fontFamily: fonts.body }}>
-          {formatDurationHuman(totalSec)} · {chapters.length} chapters
-          {sleepMinutes ? ` · sleep ${sleepMinutes}m` : ""}
-        </Text>
-        {current ? (
-          <View className="mt-5">
-            <View className="mb-2 flex-row items-start justify-between">
-              <Text className="max-w-[70%] text-[18px] text-textPrimary" style={{ fontFamily: fonts.subheading }}>
-                {current.title}
-              </Text>
-              <Text className="text-[13px] text-textSecondary" style={{ fontFamily: fonts.body }}>
-                Chapter {idx} of {chapters.length}
+    <View className="flex-1 bg-background">
+      <View className="absolute -left-20 top-[-30] h-56 w-56 rounded-full bg-gradientMid/10" />
+      <View className="absolute -right-24 top-36 h-72 w-72 rounded-full bg-gradientEnd/10" />
+      <View className="flex-1 items-center px-5 pt-10">
+        <View className="w-full max-w-[420px] flex-1 rounded-[34px] border border-border bg-surface px-4 pb-4 pt-4 shadow-sm">
+          <View className="mb-4 rounded-[28px] bg-background px-4 py-4">
+            <View className="mb-3 flex-row items-center justify-between">
+              <View className="rounded-full bg-accent/10 px-3 py-1.5">
+                <Text className="text-[11px] uppercase tracking-[0.18em] text-accent" style={{ fontFamily: fonts.bodyMedium }}>
+                  Audiobook
+                </Text>
+              </View>
+              <Text className="text-[13px] text-textSecondary" style={{ fontFamily: fonts.bodyMedium }}>
+                {chapters.length} chapters
               </Text>
             </View>
-            <AudioPlayer
-              key={current.id}
-              chapter={current}
-              speed={speed}
-              sleepMinutes={sleepMinutes}
-              initialPositionSeconds={positionsByChapter[current.id] ?? 0}
-              onPositionChange={onPositionChange}
-              onPrev={() => {
-                const i = chapters.findIndex((c) => c.id === current.id);
-                if (i > 0) setChapterId(chapters[i - 1].id);
-              }}
-              onNext={() => {
-                const i = chapters.findIndex((c) => c.id === current.id);
-                if (i < chapters.length - 1) setChapterId(chapters[i + 1].id);
+            <Text className="text-[28px] leading-[34px] text-textPrimary" style={{ fontFamily: fonts.heading }}>
+              {data.title}
+            </Text>
+            <Text className="mt-2 text-[14px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+              {formatDurationHuman(totalSec)}{sleepMinutes ? ` · sleep ${sleepMinutes}m` : ""}
+            </Text>
+          </View>
+
+          {current ? (
+            <View className="mb-4">
+              <View className="mb-2 flex-row items-center justify-between px-1">
+                <Text className="max-w-[70%] text-[17px] text-textPrimary" style={{ fontFamily: fonts.subheading }} numberOfLines={2}>
+                  {current.title}
+                </Text>
+                <Text className="text-[13px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+                  Chapter {idx} of {chapters.length}
+                </Text>
+              </View>
+              <AudioPlayer
+                key={current.id}
+                chapter={current}
+                speed={speed}
+                sleepMinutes={sleepMinutes}
+                initialPositionSeconds={positionsByChapter[current.id] ?? 0}
+                onPositionChange={onPositionChange}
+                onPrev={() => {
+                  const i = chapters.findIndex((c) => c.id === current.id);
+                  if (i > 0) setChapterId(chapters[i - 1].id);
+                }}
+                onNext={() => {
+                  const i = chapters.findIndex((c) => c.id === current.id);
+                  if (i < chapters.length - 1) setChapterId(chapters[i + 1].id);
+                }}
+              />
+            </View>
+          ) : null}
+
+          <View className="min-h-[120px] flex-1 rounded-[28px] bg-background/40 px-3 pt-4">
+            <View className="mb-2 flex-row items-center justify-between px-1">
+              <Text className="text-[18px] text-textPrimary" style={{ fontFamily: fonts.subheading }}>
+                Chapters
+              </Text>
+              <Pressable accessibilityLabel="More options" onPress={openSleepMenu}>
+                <Text className="text-[22px] text-textSecondary">⋯</Text>
+              </Pressable>
+            </View>
+            <ChapterList
+              chapters={chapters}
+              currentId={current?.id ?? ""}
+              onSelectChapter={(cid) => setChapterId(cid)}
+            />
+          </View>
+
+          <View className="mt-4 gap-3 border-t border-border pt-4">
+            <View className="flex-row items-center justify-between px-1">
+              <Text className="text-[13px] text-textSecondary" style={{ fontFamily: fonts.bodyMedium }}>
+                Playback speed
+              </Text>
+              <Pressable onPress={cycleSpeed} className="rounded-full bg-accent/10 px-3 py-1.5">
+                <Text className="text-[16px] text-accent" style={{ fontFamily: fonts.bodyMedium }}>
+                  {speed}x
+                </Text>
+              </Pressable>
+            </View>
+            <GhostButton label="Share →" onPress={() => Alert.alert("Share", `whispr://player/${id}`)} />
+            <PrimaryButton
+              label="Create new →"
+              onPress={() => {
+                router.replace("/(tabs)/create");
               }}
             />
           </View>
-        ) : null}
-        <View className="min-h-[120px] flex-1">
-          <ChapterList
-            chapters={chapters}
-            currentId={current?.id ?? ""}
-            onSelectChapter={(cid) => setChapterId(cid)}
-          />
-        </View>
-        <View className="mt-4 gap-3 border-t border-border pt-4">
-          <View className="flex-row items-center justify-between">
-            <Pressable accessibilityLabel="More options" onPress={openSleepMenu}>
-              <Text className="text-[22px]">⋯</Text>
-            </Pressable>
-            <Pressable onPress={cycleSpeed}>
-              <Text className="text-[16px] text-accent" style={{ fontFamily: fonts.bodyMedium }}>
-                {speed}x
-              </Text>
-            </Pressable>
-          </View>
-          <GhostButton label="Share →" onPress={() => Alert.alert("Share", `whispr://player/${id}`)} />
-          <PrimaryButton
-            label="Create new →"
-            onPress={() => {
-              router.replace("/(tabs)/create");
-            }}
-          />
         </View>
       </View>
     </View>

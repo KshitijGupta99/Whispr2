@@ -50,9 +50,19 @@ export function AudioPlayer({
   }, [sleepMinutes, pause, chapter.id]);
 
   return (
-    <View className="rounded-3xl bg-surface px-4 pb-5 pt-4">
-      <View className="mb-3 flex-row items-center justify-between">
-        <Text className="text-[28px] text-textPrimary" style={{ fontFamily: fonts.subheading }}>
+    <View className="overflow-hidden rounded-[28px] border border-border bg-surface px-4 pb-5 pt-4">
+      <View className="mb-4 flex-row items-center justify-between">
+        <View className="rounded-full bg-accent/10 px-3 py-1.5">
+          <Text className="text-[12px] uppercase tracking-[0.2em] text-accent" style={{ fontFamily: fonts.bodyMedium }}>
+            Now playing
+          </Text>
+        </View>
+        <Text className="text-[12px] text-textSecondary" style={{ fontFamily: fonts.bodyMedium }}>
+          {speed}x
+        </Text>
+      </View>
+      <View className="mb-3">
+        <Text className="text-[28px] text-textPrimary" style={{ fontFamily: fonts.subheading }} numberOfLines={2}>
           {chapter.title}
         </Text>
       </View>
@@ -65,7 +75,7 @@ export function AudioPlayer({
           {formatDuration(durationMillis / 1000)}
         </Text>
       </View>
-      <View className="mt-3 flex-row items-center justify-center gap-12">
+      <View className="mt-4 flex-row items-center justify-center gap-12">
         <Pressable
           accessibilityLabel="Previous chapter"
           onPress={() => {
@@ -81,9 +91,9 @@ export function AudioPlayer({
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             void toggle();
           }}
-          className="h-16 w-16 items-center justify-center"
+          className="h-18 w-18 items-center justify-center"
         >
-          <Svg width={64} height={64} viewBox="0 0 64 64">
+          <Svg width={72} height={72} viewBox="0 0 64 64">
             <Defs>
               <LinearGradient id={gid} x1="0" y1="0" x2="64" y2="64">
                 <Stop offset="0" stopColor={colors.gradientStart} />

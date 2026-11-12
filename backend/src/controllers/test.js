@@ -1,0 +1,19 @@
+const uploadToYouTube = async (trackId) => {
+  return new Promise(resolve => setTimeout(resolve, 1000)); 
+};
+ 
+async function migratePlaylist(trackIds) {
+  console.log("Migration started...");
+  let successCount = 0;
+
+  trackIds.forEach(async (trackId) => {
+    await uploadToYouTube(trackId);
+    successCount++;
+  });
+ 
+  console.log(`Migration complete! Successfully migrated ${successCount} tracks.`);
+  return successCount;
+}
+ 
+list = [1, 2, 3, ...]
+migratePlaylist([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);

@@ -96,6 +96,11 @@ export default function GeneratingScreen() {
       <Text className="mt-6 rounded-full bg-background px-5 py-2 text-[14px] text-accent" style={{ fontFamily: fonts.body }}>
         Using {voice ?? "emma"} voice
       </Text>
+      {data?.totalChunks ? (
+        <Text className="mt-4 text-[14px] text-textSecondary" style={{ fontFamily: fonts.body }}>
+          {data.completedChunks} of {data.totalChunks} chapter chunks complete
+        </Text>
+      ) : null}
       {isFetching ? (
         <ActivityIndicator className="mt-8" color={colors.primary} />
       ) : null}

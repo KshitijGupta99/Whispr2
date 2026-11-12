@@ -26,6 +26,9 @@ export interface GenerationStatusDto {
   currentStep: string;
   chaptersReady: number;
   totalChapters: number;
+  completedChunks: number;
+  totalChunks: number;
+  completionPercent: number;
   voiceId?: string;
   errorMessage?: string;
 }

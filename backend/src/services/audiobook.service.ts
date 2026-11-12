@@ -6,9 +6,6 @@ import { ChapterSplitterService } from "./ChapterSplitterService";
 import { storageService } from "./StorageService";
 import { TTSProviderFactory } from "./tts/TTSProviderFactory";
 
-const DEMO_AUDIO =
-  "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3";
-
 const splitter = new ChapterSplitterService();
 
 function waveformFromSeed(seed: string): number[] {
@@ -89,8 +86,6 @@ async function runPipeline(id: string) {
 
     const MAX_RETRIES = 2;
     const RETRY_DELAY_MS = 800;
-    const MIN_SECONDS = 30;
-
     for (let idx = 0; idx < parts.length; idx++) {
       let p = parts[idx];
       if (!p) continue;
@@ -99,20 +94,18 @@ async function runPipeline(id: string) {
       if (!cur || cur.status !== Status.PROCESSING) return;
 
       await updateProgress(id, {
-        currentStep: `Synthesizing Chapter ${idx + 1} of ${parts.length}...`,
-        progress: Math.min(88, 20 + Math.round(((idx + 0.5) / Math.max(parts.length, 1)) * 68)),
+        currentStep: `Synthesizing chapter ${idx + 1} of ${parts.length}...`,
+        progress: Math.min(95, 20 + Math.round((idx / Math.max(parts.length, 1)) * 75)),
       });
 
-      // Try synthesizing before creating DB chapter row so we can merge small chapters
+      // Each splitter result is one tracked TTS chunk. Persist it only after
+      // synthesis and storage succeed so completion reflects playable chapters.
       let synthesizedBuf: Buffer | null = null;
       let attempts = 0;
-      let usedParts = 1; // how many original parts this chapter consumed
-      let chapterTitle = p.title;
-      let contentToSynthesize = p.content;
 
       while (attempts <= MAX_RETRIES) {
         try {
-          synthesizedBuf = await tts.synthesize(contentToSynthesize, cur.voiceId, { format: "mp3" });
+          synthesizedBuf = await tts.synthesize(p.content, cur.voiceId, { format: "mp3" });
           break;
         } catch (e) {
           attempts++;
@@ -125,59 +118,37 @@ async function runPipeline(id: string) {
         }
       }
 
-      // If we got a buffer but it's shorter than minimum seconds, try merging with next part
-      if (synthesizedBuf && estimateDurationSeconds(synthesizedBuf.length) < MIN_SECONDS && idx + 1 < parts.length) {
-        const next = parts[idx + 1];
-        // merge and retry once
-        contentToSynthesize = `${contentToSynthesize}\n\n${next.content}`;
-        chapterTitle = chapterTitle;
-        usedParts = 2;
-        try {
-          synthesizedBuf = await tts.synthesize(contentToSynthesize, cur.voiceId, { format: "mp3" });
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn(`[${new Date().toISOString()}] TTS merge retry failed for audiobook ${id} chapter ${idx + 1}:`, e instanceof Error ? e.message : e);
-        }
+      if (!synthesizedBuf || synthesizedBuf.length === 0) {
+        throw new Error(`TTS produced no audio for chapter ${idx + 1}`);
       }
-
-      // Create chapter DB row now (use demo audio by default)
-      let audioUrl = DEMO_AUDIO;
-      let duration = 10 + idx * 2;
 
       const chapter = await prisma.chapter.create({
         data: {
           audiobookId: id,
           index: idx + 1,
-          title: chapterTitle,
-          audioUrl: DEMO_AUDIO,
-          duration,
+          title: p.title,
+          audioUrl: "",
+          duration: 0,
           waveformData: JSON.stringify(waveformFromSeed(`${id}-${idx}`)),
         },
       });
 
-      if (synthesizedBuf && synthesizedBuf.length > 0) {
-        try {
-          duration = estimateDurationSeconds(synthesizedBuf.length);
-          await storageService.saveChapterAudio(id, chapter.id, synthesizedBuf);
-          audioUrl = chapterMediaPath(id, chapter.id);
-          await prisma.chapter.update({ where: { id: chapter.id }, data: { audioUrl, duration } });
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.error(`[${new Date().toISOString()}] Failed saving chapter audio for ${id} chapter ${idx + 1}:`, e instanceof Error ? e.stack ?? e.message : e);
-        }
-      } else {
-        // No synthesized audio produced; leave demo and log
-        // eslint-disable-next-line no-console
-        console.error(`[${new Date().toISOString()}] No TTS audio for audiobook ${id} chapter ${idx + 1}; using demo audio.`);
+      const duration = estimateDurationSeconds(synthesizedBuf.length);
+      try {
+        await storageService.saveChapterAudio(id, chapter.id, synthesizedBuf);
+        const audioUrl = chapterMediaPath(id, chapter.id);
+        await prisma.chapter.update({ where: { id: chapter.id }, data: { audioUrl, duration } });
+      } catch (e) {
+        await prisma.chapter.delete({ where: { id: chapter.id } }).catch(() => {});
+        throw e;
       }
-
-      // If we consumed the next part as well, skip it in the main loop
-      if (usedParts > 1) {
-        idx += usedParts - 1;
-      }
-
       totalDuration += duration;
-      await updateProgress(id, { chaptersReady: idx + 1 });
+      const chaptersReady = idx + 1;
+      await updateProgress(id, {
+        chaptersReady,
+        progress: 20 + Math.round((chaptersReady / Math.max(parts.length, 1)) * 75),
+        currentStep: `Completed chapter ${chaptersReady} of ${parts.length}.`,
+      });
     }
 
     const final = await prisma.audiobook.findUnique({
@@ -257,6 +228,9 @@ export async function statusBook(id: string, userId?: string) {
     totalChapters: b.totalChapters || 1,
     voiceId: b.voiceId,
     errorMessage: b.errorMessage ?? undefined,
+    completedChunks: b.chaptersReady,
+    totalChunks: b.totalChapters || 1,
+    completionPercent: b.progress,
   };
 }
 
